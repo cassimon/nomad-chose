@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: 'nomad_chose: A NOMAD plugin for ...'
+version: 0.1.0
+message:
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Simon
+    family-names: Ternes
+    orcid: 'https://orcid.org/0000-0000-0000-0000'
+doi: 10.5281/zenodo.0000000
+repository-code: https://github.com/Tor Vergata University of Rome/nomad_chose
+url: https://zenodo.org/records/0000000
+keywords:
+  - keyword1
+abstract:
+  This is a template for a CITATION.cff file. Please edit the fields accordingly.
+license: Apache-2.0
+funding:
+  - name: Funding Agency
+    award: 123456

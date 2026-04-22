@@ -1,0 +1,33 @@
+{
+  "template": "https://github.com/FAIRmat-NFDI/cookiecutter-nomad-plugin",
+  "commit": "ae953b0ba24e2df26daf5d641faeaaebb1d8aba2",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "full_name": "Simon Ternes",
+      "email": "ternes@ing.uniroma2.it",
+      "github_username": "Tor Vergata University of Rome",
+      "plugin_name": "nomad_chose",
+      "module_name": "nomad_chose",
+      "short_description": "Nomad ELN for UNITOV using baseclasses from Hysprint",
+      "version": "0.1.0",
+      "license": "Apache-2.0",
+      "include_schema_package": true,
+      "include_normalizer": true,
+      "include_parser": true,
+      "include_app": false,
+      "include_example_uploads": true,
+      "include_action": false,
+      "include_north_tools": false,
+      "north_tool_name": "n",
+      "include_citation_file": true,
+      "_copy_without_render": [
+        "*.html",
+        "*.png"
+      ],
+      "_template": "https://github.com/FAIRmat-NFDI/cookiecutter-nomad-plugin",
+      "_commit": "ae953b0ba24e2df26daf5d641faeaaebb1d8aba2"
+    }
+  },
+  "directory": null
+}
