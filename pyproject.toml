@@ -10,7 +10,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    
+
 ]
 name = "nomad_chose"
 description = "Nomad ELN for UNITOV using baseclasses from Hysprint"
@@ -25,11 +25,12 @@ maintainers = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "nomad-lab>=1.4.1"
+    "nomad-lab>=1.4.1",
+    "nomad-perovskite-solar-cell-sample-plains @ git+https://github.com/cassimon/nomad-perovskite-solar-cell-sample-plains.git@main",
 ]
 
-[project.urls]
-Repository = "https://github.com/Tor Vergata University of Rome/nomad_chose"
+#[project.urls]
+#Repository = "https://github.com/Tor Vergata University of Rome/nomad_chose"
 
 [project.optional-dependencies]
 dev = [
@@ -47,7 +48,7 @@ dev = [
 extra-index-url = [
   "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple",
 ]
-    
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [
