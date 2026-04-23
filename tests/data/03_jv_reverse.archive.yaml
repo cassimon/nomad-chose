@@ -1,0 +1,8 @@
+# tests/data/03_jv_reverse.archive.yaml
+data:
+  m_def: nomad_chose.schema_packages.schema_package.LabJVMeasurement
+  name: JV reverse scan
+  operator: Alice
+  jv_file: jv_reverse.csv
+  pvk_sample:
+    reference: ../upload/raw/01_sample.archive.yaml#/data

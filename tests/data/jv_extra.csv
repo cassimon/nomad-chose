@@ -1,0 +1,11 @@
+# tests/data/jv_extra.csv
+# operator: Carol
+# light_intensity: 100.0
+voltage,current_density
+0.00,20.80
+0.20,20.75
+0.40,20.60
+0.60,19.90
+0.80,17.50
+1.00,9.80
+1.10,0.00

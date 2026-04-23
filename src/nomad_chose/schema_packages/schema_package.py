@@ -29,17 +29,17 @@ configuration = config.get_plugin_entry_point(
 )
 
 
-# class NewSchemaPackage(Schema):
-#     name = Quantity(
-#         type=str, a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity)
-#     )
-#     message = Quantity(type=str)
+class NewSchemaPackage(Schema):
+    name = Quantity(
+        type=str, a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity)
+    )
+    message = Quantity(type=str)
 
-#     def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger') -> None:
-#         super().normalize(archive, logger)
+    def normalize(self, archive: 'EntryArchive', logger: 'BoundLogger') -> None:
+        super().normalize(archive, logger)
 
-#         logger.info('NewSchema.normalize', parameter=configuration.parameter)
-#         self.message = f'Hello {self.name}!'
+        logger.info('NewSchema.normalize', parameter=configuration.parameter)
+        self.message = f'Hello {self.name}!'
 
 
 
@@ -49,15 +49,11 @@ m_package = SchemaPackage()
 
 class LabJVMeasurement(JVMeasurement, EntryData):
     """
-    JV measurement entry.
-    - pvk_sample: reference to sample → drives History/References tab
-    - jv_file:    raw CSV file attached here (FileEditQuantity)
-    - normalize() reads jv_file, parses it, fills self.results,
-                  then copies scalar summary into sample.performed_measurements.jv[]
-    No reference from sample back to this entry — cycle avoided.
+    JV measurement entry for the CHOSE lab instrument.
+
     """
     m_def = Section(
-        label='Lab JV Measurement',
+        label='CHOSE JV Measurement',
         a_eln=dict(
             properties=dict(
                 order=['name', 'pvk_sample', 'jv_file', 'datetime', 'operator']
@@ -67,15 +63,16 @@ class LabJVMeasurement(JVMeasurement, EntryData):
 
     pvk_sample = Quantity(
         type=Reference(PerovskiteSolarCellSample.m_def),
-        description='Sample this measurement was performed on.',
+        description='The PerovskiteSolarCellSample this measurement belongs to.',
         a_eln=ELNAnnotation(component='ReferenceEditQuantity'),
     )
+
     jv_file = Quantity(
         type=str,
-        description='Raw JV CSV file from the instrument.',
+        description='Raw JV CSV file from the CHOSE instrument.',
         a_eln=ELNAnnotation(
             component='FileEditQuantity',
-            label='Raw JV file',
+            label='Raw JV file (.csv)',
         ),
     )
     operator = Quantity(
@@ -86,49 +83,47 @@ class LabJVMeasurement(JVMeasurement, EntryData):
     def normalize(self, archive, logger):
         super().normalize(archive, logger)
 
-        # ── Step 1: parse raw file if present ───────────────────────────────
-        if self.jv_file and archive.m_context:
+        # Parse the raw file if present and context is available
+        if self.jv_file and archive is not None and archive.m_context:
+            from nomad_chose.parsers.jv_parser import parse_jv_csv
             try:
                 raw_path = archive.m_context.raw_path(self.jv_file)
-                jv_result = parse_jv_csv(raw_path, logger)
-                if jv_result:
-                    self.results = [jv_result]
-                    # Also attach file path on the SolarCellJV result section
-                    # so it shows up in the baseclasses file browser
-                    self.results[0].data_file = self.jv_file
+                result = parse_jv_csv(raw_path, logger)
+                if result is not None:
+                    result.data_file = self.jv_file
+                    self.results = [result]
             except Exception as e:
-                logger.warning(f'Could not parse JV file {self.jv_file}: {e}')
+                logger.warning(
+                    f'LabJVMeasurement: could not parse {self.jv_file}: {e}'
+                )
 
-        # ── Step 2: copy scalar summary into sample.performed_measurements ───
-        # One-directional: measurement → sample. No reference back.
+        # Copy scalar summary into sample.performed_measurements (no cycle:
+        # measurement → sample only, never sample → measurement entry)
         if self.pvk_sample is None:
-            logger.warning(f'{self.__class__.__name__}: no pvk_sample set.')
+            logger.warning('LabJVMeasurement: no pvk_sample set, skipping registration.')
             return
 
         if not self.results:
             return
 
+        from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import PerformedMeasurements
+        from baseclasses.solar_energy.jvmeasurement import SolarCellJV
+
         best = max(
             self.results,
             key=lambda r: r.efficiency if r.efficiency is not None else 0,
         )
-
-        jv_summary = SolarCellJV()
-        jv_summary.efficiency                    = best.efficiency
-        jv_summary.open_circuit_voltage          = best.open_circuit_voltage
-        jv_summary.short_circuit_current_density = best.short_circuit_current_density
-        jv_summary.fill_factor                   = best.fill_factor
-        jv_summary.light_intensity               = best.light_intensity
-        jv_summary.data_file                     = self.jv_file
+        summary = SolarCellJV()
+        summary.efficiency                    = best.efficiency
+        summary.open_circuit_voltage          = best.open_circuit_voltage
+        summary.short_circuit_current_density = best.short_circuit_current_density
+        summary.fill_factor                   = best.fill_factor
+        summary.light_intensity               = best.light_intensity
+        summary.data_file                     = self.jv_file
 
         if self.pvk_sample.performed_measurements is None:
             self.pvk_sample.performed_measurements = PerformedMeasurements()
-
-        self.pvk_sample.performed_measurements.jv.append(jv_summary)
-        logger.info(
-            f'Appended JV summary (PCE={best.efficiency}) '
-            f'into sample.performed_measurements.jv'
-        )
+        self.pvk_sample.performed_measurements.jv.append(summary)
 
 
 m_package.__init_metainfo__()

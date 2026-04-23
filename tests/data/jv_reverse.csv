@@ -1,0 +1,11 @@
+# tests/data/jv_reverse.csv
+# operator: Alice
+# light_intensity: 100.0
+voltage,current_density
+0.00,21.50
+0.20,21.45
+0.40,21.30
+0.60,20.80
+0.80,18.90
+1.00,11.20
+1.14,0.00

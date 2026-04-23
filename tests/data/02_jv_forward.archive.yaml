@@ -1,0 +1,8 @@
+# tests/data/02_jv_forward.archive.yaml
+data:
+  m_def: nomad_chose.schema_packages.schema_package.LabJVMeasurement
+  name: JV forward scan
+  operator: Alice
+  jv_file: jv_forward.csv
+  pvk_sample:
+    reference: ../upload/raw/01_sample.archive.yaml#/data

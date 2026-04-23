@@ -1,0 +1,8 @@
+# tests/data/05_jv_extra.archive.yaml
+data:
+  m_def: nomad_chose.schema_packages.schema_package.LabJVMeasurement
+  name: JV extra scan
+  operator: Carol
+  jv_file: jv_extra.csv
+  pvk_sample:
+    reference: ../upload/raw/01_sample.archive.yaml#/data

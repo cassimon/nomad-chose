@@ -1,0 +1,3 @@
+This is a plain text file, not a JV measurement.
+temperature,humidity
+25.0,60.0

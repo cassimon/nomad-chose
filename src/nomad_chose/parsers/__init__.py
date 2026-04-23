@@ -6,7 +6,7 @@ class NewParserEntryPoint(ParserEntryPoint):
     parameter: int = Field(0, description='Custom configuration parameter')
 
     def load(self):
-        from nomad_chose.parsers.parser import NewParser
+        from nomad_chose.parsers.jv_parser import NewParser
 
         return NewParser(**self.model_dump())
 
@@ -15,4 +15,27 @@ parser_entry_point = NewParserEntryPoint(
     name='NewParser',
     description='New parser entry point configuration.',
     mainfile_name_re=r'.*\.newmainfilename',
+)
+
+class ChoseJVParserEntryPoint(ParserEntryPoint):
+    """
+    Entry point for the CHOSE JV CSV parser.
+
+    Matches files whose name ends with .jv.csv or contains _JV_,
+    and whose first non-comment line is the header 'voltage,current_density'.
+    The content check prevents false positives from other CSV files.
+    """
+
+    def load(self):
+        from nomad_chose.parsers.jv_parser import ChoseJVParser
+        return ChoseJVParser(**self.dict())
+
+
+chose_jv_parser = ChoseJVParserEntryPoint(
+    name='ChoseJVParser',
+    description='Parser for JV measurement CSV files from the CHOSE lab instrument.',
+    # File name matcher — adjust the pattern to your actual naming convention
+    mainfile_name_re=r'.*\.(jv\.csv|JV\.csv)|.*_[Jj][Vv]_.*\.csv',
+    # Content check: file must contain the exact column header
+    mainfile_contents_re=r'voltage,current_density',
 )

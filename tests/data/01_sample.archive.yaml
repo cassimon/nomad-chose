@@ -1,0 +1,6 @@
+# tests/data/01_sample.archive.yaml
+data:
+  m_def: nomad_perovskite_solar_cell_sample_plains.schema_packages.sample.PerovskiteSolarCellSample
+  name: Test cell
+  lab_id: PVK-TEST-001
+  architecture: pin
