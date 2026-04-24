@@ -3,5 +3,4 @@ data:
   m_def: lab_plugin.schema.LabEQEMeasurement
   name: EQE measurement
   operator: Bob
-  pvk_sample:
-    reference: ../upload/raw/01_sample.archive.yaml#/data
+  pvk_sample: ../upload/raw/01_sample.archive.yaml#/data

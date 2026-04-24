@@ -4,5 +4,4 @@ data:
   name: JV forward scan
   operator: Alice
   jv_file: jv_forward.csv
-  pvk_sample:
-    reference: ../upload/raw/01_sample.archive.yaml#/data
+  pvk_sample: ../upload/raw/01_sample.archive.yaml#/data

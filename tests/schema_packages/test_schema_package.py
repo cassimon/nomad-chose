@@ -9,3 +9,20 @@ def test_schema_package():
     normalize_all(entry_archive)
 
     assert entry_archive.data.message == 'Hello Markus!'
+
+def test_cross_reference():
+    base_dir = os.path.join('tests', 'data')
+
+    files = os.path.join(base_dir, '02_jv_forward.archive.yaml')
+
+    # Parse both files together (important!)
+    archives = parse(files)
+
+    # Normalize all together so references resolve
+    normalize_all(archives)
+
+    # The second archive is your JV measurement
+    jv_archive = archives[1]
+
+    assert jv_archive.data.pvk_sample is not None
+    assert jv_archive.data.pvk_sample.name == 'Test cell'

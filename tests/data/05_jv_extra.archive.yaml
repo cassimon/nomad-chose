@@ -4,5 +4,4 @@ data:
   name: JV extra scan
   operator: Carol
   jv_file: jv_extra.csv
-  pvk_sample:
-    reference: ../upload/raw/01_sample.archive.yaml#/data
+  pvk_sample: ../upload/raw/01_sample.archive.yaml#/data
