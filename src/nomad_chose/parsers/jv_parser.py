@@ -18,24 +18,11 @@ import re
 import numpy as np
 from nomad.parsing import MatchingParser
 from nomad.datamodel import EntryArchive
-
+from pathlib import Path
 
 configuration = config.get_plugin_entry_point(
     'nomad_chose.parsers:parser_entry_point'
 )
-
-
-class NewParser(MatchingParser):
-    def parse(
-        self,
-        mainfile: str,
-        archive: 'EntryArchive',
-        logger: 'BoundLogger',
-        child_archives: dict[str, 'EntryArchive'] = None,
-    ) -> None:
-        logger.info('NewParser.parse', parameter=configuration.parameter)
-
-        archive.workflow2 = Workflow(name='test')
 
 
 # ── Pure parsing function ─────────────────────────────────────────────────────
@@ -121,28 +108,23 @@ class ChoseJVParser(MatchingParser):
       - manually in the ELN after upload.
     """
 
-    def parse(
-        self,
-        mainfile: str,
-        archive: EntryArchive,
-        logger,
-        child_archives=None,
-    ):
-        from nomad_chose.schema import LabJVMeasurement
+    def parse(self, mainfile, archive, logger=None, child_archives=None):
+        from nomad_chose.schema_packages.schema_package import LabJVMeasurement
+
+        if logger is None:
+            logger = logging.getLogger(__name__)
+
+        filename = Path(mainfile).name   # ← works on Windows and Linux
 
         logger.info(f'ChoseJVParser: parsing {mainfile}')
 
         measurement = LabJVMeasurement()
-        measurement.name    = mainfile.split('/')[-1]
-        measurement.jv_file = mainfile.split('/')[-1]
+        measurement.name    = filename
+        measurement.jv_file = filename
 
-        # Parse the raw CSV immediately at parse time
         result = parse_jv_csv(mainfile, logger)
         if result is not None:
-            result.data_file   = measurement.jv_file
+            result.data_file    = filename   # ← same fix here
             measurement.results = [result]
 
         archive.data = measurement
-        # normalize() on LabJVMeasurement will run automatically after parse()
-        # and will copy the summary into pvk_sample.performed_measurements
-        # if pvk_sample has been set via the sidecar.

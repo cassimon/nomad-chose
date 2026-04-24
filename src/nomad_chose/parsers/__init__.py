@@ -1,22 +1,6 @@
 from nomad.config.models.plugins import ParserEntryPoint
 from pydantic import Field
 
-
-class NewParserEntryPoint(ParserEntryPoint):
-    parameter: int = Field(0, description='Custom configuration parameter')
-
-    def load(self):
-        from nomad_chose.parsers.jv_parser import NewParser
-
-        return NewParser(**self.model_dump())
-
-
-parser_entry_point = NewParserEntryPoint(
-    name='NewParser',
-    description='New parser entry point configuration.',
-    mainfile_name_re=r'.*\.newmainfilename',
-)
-
 class ChoseJVParserEntryPoint(ParserEntryPoint):
     """
     Entry point for the CHOSE JV CSV parser.
@@ -25,13 +9,13 @@ class ChoseJVParserEntryPoint(ParserEntryPoint):
     and whose first non-comment line is the header 'voltage,current_density'.
     The content check prevents false positives from other CSV files.
     """
-
+    parameter: int = Field(0, description='Custom configuration parameter')
     def load(self):
         from nomad_chose.parsers.jv_parser import ChoseJVParser
-        return ChoseJVParser(**self.dict())
+        return ChoseJVParser(**self.model_dump())
 
 
-chose_jv_parser = ChoseJVParserEntryPoint(
+parser_entry_point = ChoseJVParserEntryPoint(
     name='ChoseJVParser',
     description='Parser for JV measurement CSV files from the CHOSE lab instrument.',
     # File name matcher — adjust the pattern to your actual naming convention
