@@ -19,10 +19,11 @@ def test_cross_reference():
     archives = parse(files)
 
     # Normalize all together so references resolve
-    normalize_all(archives)
+    for archive in archives:
+        normalize_all(archive)
 
     # The second archive is your JV measurement
-    jv_archive = archives[1]
+    jv_archive = archives[0]
 
     assert jv_archive.data.pvk_sample is not None
     assert jv_archive.data.pvk_sample.name == 'Test cell'
