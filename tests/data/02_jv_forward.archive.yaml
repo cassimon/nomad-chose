@@ -1,7 +1,7 @@
 # tests/data/02_jv_forward.archive.yaml
 data:
-  m_def: nomad_chose.schema_packages.schema_package.LabJVMeasurement
-  name: Stability JV upload
-  operator: Alice
-  jv_file: 0001_2025-11-20_17.32.31_Stability (JV)_AI03-1A.txt
-  pvk_sample: ../upload/raw/01_sample.archive.yaml#/data
+  m_def: "nomad_chose.schema_packages.schema_package.LabJVMeasurement"
+  name: "Stability JV upload"
+  operator: "Alice"
+  jv_file: "0001_2025-11-20_17.32.31_Stability (JV)_AI03-1A.txt"
+  pvk_sample: "../upload/raw/01_sample.archive.yaml#/data"

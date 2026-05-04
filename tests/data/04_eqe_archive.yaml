@@ -1,7 +1,7 @@
 # tests/data/04_eqe.archive.yaml
 data:
-  m_def: nomad_chose.schema_packages.schema_package.LabEQEMeasurement
-  name: IPCE upload
-  operator: Bob
-  eqe_file: 2025-11-20_15.49.56_IPCE_AI03.txt
-  pvk_sample: ../upload/raw/01_sample.archive.yaml#/data
+  m_def: "nomad_chose.schema_packages.schema_package.LabEQEMeasurement"
+  name: "IPCE upload"
+  operator: "Bob"
+  eqe_file: "2025-11-20_15.49.56_IPCE_AI03.txt"
+  pvk_sample: "../upload/raw/01_sample.archive.yaml#/data"
