@@ -6,15 +6,22 @@ class NewParserEntryPoint(ParserEntryPoint):
     parameter: int = Field(0, description='Custom configuration parameter')
 
     def load(self):
-        from nomad_chose.parsers.jv_parser import NewParser
+        from nomad_chose.parsers.parsers import ChoseParser
 
-        return NewParser(**self.model_dump())
+        return ChoseParser(**self.model_dump())
 
 
 parser_entry_point = NewParserEntryPoint(
-    name='NewParser',
-    description='New parser entry point configuration.',
-    mainfile_name_re=r'.*\.newmainfilename',
+    name='ChoseParser',
+    description='Unified parser for JV, Stability, and IPCE files from the CHOSE setup.',
+    mainfile_name_re=r'.*\.(csv|txt)$',
+    mainfile_contents_re=(
+        r'voltage,current_density'
+        r'|Test\tStability \(JV\)'
+        r'|Test\tStability \(Parameters\)'
+        r'|Test\tStability \(Tracking\)'
+        r'|Test\tIPCE'
+    ),
 )
 
 class ChoseJVParserEntryPoint(ParserEntryPoint):
@@ -27,15 +34,13 @@ class ChoseJVParserEntryPoint(ParserEntryPoint):
     """
 
     def load(self):
-        from nomad_chose.parsers.jv_parser import ChoseJVParser
-        return ChoseJVParser(**self.dict())
+        from nomad_chose.parsers.parsers import ChoseParser
+        return ChoseParser(**self.model_dump())
 
 
 chose_jv_parser = ChoseJVParserEntryPoint(
     name='ChoseJVParser',
-    description='Parser for JV measurement CSV files from the CHOSE lab instrument.',
-    # File name matcher — adjust the pattern to your actual naming convention
-    mainfile_name_re=r'.*\.(jv\.csv|JV\.csv)|.*_[Jj][Vv]_.*\.csv',
-    # Content check: file must contain the exact column header
-    mainfile_contents_re=r'voltage,current_density',
+    description='Backward compatible alias of the unified CHOSE parser.',
+    mainfile_name_re=parser_entry_point.mainfile_name_re,
+    mainfile_contents_re=parser_entry_point.mainfile_contents_re,
 )

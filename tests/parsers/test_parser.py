@@ -1,33 +1,27 @@
 import logging
-
-from nomad.datamodel import EntryArchive
-
-from nomad_chose.parsers.jv_parser import NewParser
-
-
-def test_parse_file():
-    parser = NewParser()
-    archive = EntryArchive()
-    parser.parse('tests/data/example.out', archive, logging.getLogger())
-
-    assert archive.workflow2.name == 'test'
-
-"""
-Unit tests for parse_jv_csv — no NOMAD infrastructure required.
-All tests operate on real CSV files in tests/data/.
-"""
-
-import pytest
-import numpy as np
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from baseclasses.solar_energy.jvmeasurement import SolarCellJV
-from nomad_chose.parsers.jv_parser import parse_jv_csv, ChoseJVParser
-from nomad_chose.schema_packages.schema_package import LabJVMeasurement
+from nomad.datamodel import EntryArchive
+from nomad_chose.parsers.file_reading import (
+    detect_measurement_kind,
+    parse_ipce_file,
+    parse_jv_csv,
+    parse_jv_file,
+    parse_stability_pair,
+)
+from nomad_chose.parsers.parsers import ChoseParser
+from nomad_chose.schema_packages.schema_package import (
+    LabEQEMeasurement,
+    LabJVMeasurement,
+    LabStabilityMeasurement,
+)
 from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import (
-    PerovskiteSolarCellSample,
     PerformedMeasurements,
+    PerovskiteSolarCellSample,
 )
 
 DATA = Path(__file__).parent.parent / 'data'
@@ -36,177 +30,148 @@ DATA = Path(__file__).parent.parent / 'data'
 class DummyLogger:
     def __init__(self):
         self.messages = []
-    def warning(self, msg, **kw): self.messages.append(('warning', msg))
-    def info(self, msg, **kw):    self.messages.append(('info', msg))
-    def error(self, msg, **kw):   self.messages.append(('error', msg))
+
+    def warning(self, msg, **kw):
+        self.messages.append(('warning', msg))
+
+    def info(self, msg, **kw):
+        self.messages.append(('info', msg))
 
 
-# ── parse_jv_csv ─────────────────────────────────────────────────────────────
+class TestFileReading:
 
-class TestParseJvCsv:
+    def test_parse_stability_jv_txt_returns_two_scans(self, stability_jv_txt):
+        results = parse_jv_file(stability_jv_txt)
+        assert len(results) == 2
+        assert all(isinstance(result, SolarCellJV) for result in results)
 
-    def test_returns_solar_cell_jv(self, jv_forward_csv):
-        assert isinstance(parse_jv_csv(jv_forward_csv), SolarCellJV)
+    def test_detect_measurement_kind(self, stability_parameters_txt, ipce_txt):
+        assert detect_measurement_kind(stability_parameters_txt) == 'stability_parameters'
+        assert detect_measurement_kind(ipce_txt) == 'ipce'
 
-    def test_voc_positive(self, jv_forward_csv):
-        assert parse_jv_csv(jv_forward_csv).open_circuit_voltage > 0
+    def test_parse_stability_pair(self, stability_parameters_txt, stability_tracking_txt):
+        parsed = parse_stability_pair(stability_parameters_txt, stability_tracking_txt)
+        assert parsed.parameters['efficiency_fw'].size == 1
+        assert parsed.tracking['power'].size == 1
 
-    def test_jsc_positive(self, jv_forward_csv):
-        assert parse_jv_csv(jv_forward_csv).short_circuit_current_density > 0
+    def test_parse_ipce_file(self, ipce_txt):
+        parsed = parse_ipce_file(ipce_txt)
+        assert parsed is not None
+        assert len(parsed.photon_energy_array) > 5
+        assert len(parsed.eqe_array) > 5
 
-    def test_fill_factor_between_0_and_1(self, jv_forward_csv):
-        ff = parse_jv_csv(jv_forward_csv).fill_factor
-        assert 0 < ff < 1
 
-    def test_efficiency_positive(self, jv_forward_csv):
-        assert parse_jv_csv(jv_forward_csv).efficiency > 0
+class TestParserDispatch:
+    def test_parse_stability_jv_creates_lab_jv_measurement(self, stability_jv_txt):
+        parser = ChoseParser()
+        archive = EntryArchive()
+        parser.parse(stability_jv_txt, archive, logging.getLogger())
 
-    def test_array_lengths_match(self, jv_forward_csv):
-        result = parse_jv_csv(jv_forward_csv)
-        assert len(result.voltage) == len(result.current_density)
+        assert isinstance(archive.data, LabJVMeasurement)
+        assert archive.data.jv_file.endswith('.txt')
+        assert archive.data.operator == 'FDN'
 
-    def test_reverse_higher_efficiency_than_forward(
-        self, jv_forward_csv, jv_reverse_csv
+    def test_parse_stability_parameters_creates_combined_stability_measurement(
+        self,
+        stability_parameters_txt,
     ):
-        fwd = parse_jv_csv(jv_forward_csv)
-        rev = parse_jv_csv(jv_reverse_csv)
-        assert rev.efficiency > fwd.efficiency
+        parser = ChoseParser()
+        archive = EntryArchive()
+        parser.parse(stability_parameters_txt, archive, logging.getLogger())
 
-    def test_empty_file_returns_none(self, tmp_path):
-        f = tmp_path / 'empty.csv'
-        f.write_text('voltage,current_density\n')
-        assert parse_jv_csv(str(f), DummyLogger()) is None
+        assert isinstance(archive.data, LabStabilityMeasurement)
+        assert archive.data.stability_parameters_file.endswith('(Parameters)_AI03-1A.txt')
+        assert archive.data.stability_tracking_file.endswith('(Tracking)_AI03-1A.txt')
 
-    def test_empty_file_logs_warning(self, tmp_path):
-        f = tmp_path / 'empty.csv'
-        f.write_text('voltage,current_density\n')
-        logger = DummyLogger()
-        parse_jv_csv(str(f), logger)
-        assert any('no data rows' in m[1] for m in logger.messages
-                   if m[0] == 'warning')
+    def test_parse_ipce_creates_eqe_measurement(self, ipce_txt):
+        parser = ChoseParser()
+        archive = EntryArchive()
+        parser.parse(ipce_txt, archive, logging.getLogger())
 
-    def test_light_intensity_from_header(self):
-        result = parse_jv_csv(str(DATA / 'jv_forward.csv'))
-        assert float(result.light_intensity.magnitude) == pytest.approx(100.0)
+        assert isinstance(archive.data, LabEQEMeasurement)
+        assert archive.data.eqe_file.endswith('_IPCE_AI03.txt')
+        assert archive.data.operator == 'FDN DE NICOLA'
 
 
-    def test_default_light_intensity_100(self, tmp_path):
-        f = tmp_path / 'no_header.csv'
-        f.write_text('voltage,current_density\n0.00,20.0\n1.00,0.0\n')
-        assert float(parse_jv_csv(str(f)).light_intensity.magnitude) == pytest.approx(100.0)
-
-    def test_malformed_row_is_skipped(self, tmp_path):
-        f = tmp_path / 'bad_row.csv'
-        f.write_text(
-            'voltage,current_density\n'
-            '0.00,21.0\n'
-            'BADROW\n'           # malformed
-            '1.00,0.0\n'
-        )
-        logger = DummyLogger()
-        result = parse_jv_csv(str(f), logger)
-        # still returns a result from the good rows
-        assert result is not None
-        assert any('skipping' in m[1] for m in logger.messages
-                   if m[0] == 'warning')
-
-    def test_three_files_have_distinct_efficiencies(
-        self, jv_forward_csv, jv_reverse_csv, jv_extra_csv
-    ):
-        effs = {
-            parse_jv_csv(jv_forward_csv).efficiency,
-            parse_jv_csv(jv_reverse_csv).efficiency,
-            parse_jv_csv(jv_extra_csv).efficiency,
-        }
-        assert len(effs) == 3
-
-
-# ── LabJVMeasurement.normalize ────────────────────────────────────────────────
-
-class TestLabJVMeasurementNormalize:
-
-    def _archive(self, csv_name: str):
+class TestSchemaNormalize:
+    def _archive_with_file(self, filename: str):
         archive = MagicMock()
         archive.m_context = MagicMock()
-        archive.m_context.raw_path.return_value = str(DATA / csv_name)
+        archive.m_context.raw_path.return_value = str(DATA / filename)
         return archive
 
-    def _normalize(self, meas, archive):
-        with patch.object(LabJVMeasurement.__bases__[0], 'normalize',
-                          return_value=None):
-            meas.normalize(archive, DummyLogger())
-
-    def test_parses_file_and_sets_results(self, jv_forward_csv):
-        meas = LabJVMeasurement()
-        meas.jv_file = 'jv_forward.csv'
-        meas.pvk_sample = PerovskiteSolarCellSample()
-        self._normalize(meas, self._archive('jv_forward.csv'))
-        assert meas.results and meas.results[0].efficiency > 0
-
-    def test_data_file_attached_to_result(self):
-        meas = LabJVMeasurement()
-        meas.jv_file = 'jv_forward.csv'
-        meas.pvk_sample = PerovskiteSolarCellSample()
-        self._normalize(meas, self._archive('jv_forward.csv'))
-        assert meas.results[0].data_file == 'jv_forward.csv'
-
-    def test_summary_written_into_sample(self):
+    def test_lab_jv_measurement_normalize_for_stability_jv(self):
         sample = PerovskiteSolarCellSample()
-        meas = LabJVMeasurement()
-        meas.jv_file = 'jv_forward.csv'
-        meas.pvk_sample = sample
-        self._normalize(meas, self._archive('jv_forward.csv'))
+        measurement = LabJVMeasurement()
+        measurement.jv_file = '0001_2025-11-20_17.32.31_Stability (JV)_AI03-1A.txt'
+        measurement.pvk_sample = sample
+
+        with patch.object(LabJVMeasurement.__bases__[0], 'normalize', return_value=None):
+            measurement.normalize(self._archive_with_file(measurement.jv_file), DummyLogger())
+
+        assert len(measurement.results) == 2
         assert isinstance(sample.performed_measurements, PerformedMeasurements)
         assert len(sample.performed_measurements.jv) == 1
 
-    def test_summary_data_file_set(self):
-        sample = PerovskiteSolarCellSample()
-        meas = LabJVMeasurement()
-        meas.jv_file = 'jv_forward.csv'
-        meas.pvk_sample = sample
-        self._normalize(meas, self._archive('jv_forward.csv'))
-        assert sample.performed_measurements.jv[0].data_file == 'jv_forward.csv'
+    def test_lab_stability_measurement_normalize(self):
+        measurement = LabStabilityMeasurement()
+        measurement.stability_parameters_file = (
+            '0000_2025-11-20_17.32.31_Stability (Parameters)_AI03-1A.txt'
+        )
+        measurement.stability_tracking_file = (
+            '0000_2025-11-20_17.32.31_Stability (Tracking)_AI03-1A.txt'
+        )
 
-    def test_three_measurements_accumulate(self):
-        sample = PerovskiteSolarCellSample()
-        for csv in ('jv_forward.csv', 'jv_reverse.csv', 'jv_extra.csv'):
-            meas = LabJVMeasurement()
-            meas.jv_file = csv
-            meas.pvk_sample = sample
-            self._normalize(meas, self._archive(csv))
-        assert len(sample.performed_measurements.jv) == 3
-
-    def test_no_pvk_sample_logs_warning(self):
-        logger = DummyLogger()
-        meas = LabJVMeasurement()
-        meas.jv_file = 'jv_forward.csv'
-        meas.pvk_sample = None
-        with patch.object(LabJVMeasurement.__bases__[0], 'normalize',
-                          return_value=None):
-            meas.normalize(self._archive('jv_forward.csv'), logger)
-        assert any('no pvk_sample' in m[1] for m in logger.messages
-                   if m[0] == 'warning')
-
-    def test_no_context_skips_file_parse(self):
-        meas = LabJVMeasurement()
-        meas.jv_file = 'jv_forward.csv'
-        meas.pvk_sample = PerovskiteSolarCellSample()
         archive = MagicMock()
-        archive.m_context = None
-        with patch.object(LabJVMeasurement.__bases__[0], 'normalize',
-                          return_value=None):
-            meas.normalize(archive, DummyLogger())
-        assert not meas.results
+        archive.m_context = MagicMock()
 
-    def test_no_cycle_sample_not_referenced_back(self):
-        """Sample object must not hold a reference back to the measurement entry."""
+        def _raw_path(name):
+            return str(DATA / name)
+
+        archive.m_context.raw_path.side_effect = _raw_path
+
+        measurement.normalize(archive, DummyLogger())
+
+        assert measurement.efficiency_fw is not None
+        assert measurement.tracking_power is not None
+        assert measurement.efficiency_fw.size == 1
+        assert measurement.tracking_power.size == 1
+
+    def test_lab_eqe_measurement_normalize(self):
+        measurement = LabEQEMeasurement()
+        measurement.eqe_file = '2025-11-20_15.49.56_IPCE_AI03.txt'
+
+        archive = MagicMock()
+        archive.m_context = MagicMock()
+        archive.m_context.raw_path.return_value = str(DATA / measurement.eqe_file)
+
+        with patch.object(LabEQEMeasurement.__bases__[0], 'normalize', return_value=None):
+            measurement.normalize(archive, DummyLogger())
+
+        assert measurement.eqe_data
+        assert len(measurement.eqe_data[0].eqe_array) > 10
+
+    # ── Sample history (performed_measurements) registration ─────────────────
+
+    def test_stability_jv_writes_best_scan_to_sample_history(self):
+        """Stability JV normalize picks the better scan and registers it on the sample."""
         sample = PerovskiteSolarCellSample()
-        meas = LabJVMeasurement()
-        meas.jv_file = 'jv_forward.csv'
-        meas.pvk_sample = sample
-        self._normalize(meas, self._archive('jv_forward.csv'))
-        # performed_measurements.jv[] contains SolarCellJV objects,
-        # not references to LabJVMeasurement — confirm type
-        for jv_item in sample.performed_measurements.jv:
-            assert isinstance(jv_item, SolarCellJV)
-            assert not isinstance(jv_item, LabJVMeasurement)
+        measurement = LabJVMeasurement()
+        measurement.jv_file = '0001_2025-11-20_17.32.31_Stability (JV)_AI03-1A.txt'
+        measurement.pvk_sample = sample
+
+        with patch.object(LabJVMeasurement.__bases__[0], 'normalize', return_value=None):
+            measurement.normalize(
+                self._archive_with_file(measurement.jv_file), DummyLogger()
+            )
+
+        # Two JV curves (FW + RV) parsed; only the best efficiency appears in sample history
+        assert len(measurement.results) == 2
+        assert isinstance(sample.performed_measurements, PerformedMeasurements)
+        assert len(sample.performed_measurements.jv) == 1
+        summary = sample.performed_measurements.jv[0]
+        assert summary.efficiency is not None
+        assert summary.efficiency > 0
+        assert summary.open_circuit_voltage is not None
+        assert summary.fill_factor is not None
+        assert summary.data_file == measurement.jv_file
