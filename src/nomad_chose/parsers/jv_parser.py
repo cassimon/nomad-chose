@@ -128,7 +128,7 @@ class ChoseJVParser(MatchingParser):
         logger,
         child_archives=None,
     ):
-        from nomad_chose.schema import LabJVMeasurement
+        from nomad_chose.schema_packages.schema_package import LabJVMeasurement
 
         logger.info(f'ChoseJVParser: parsing {mainfile}')
 

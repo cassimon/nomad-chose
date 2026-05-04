@@ -12,7 +12,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 
 ]
-name = "nomad_chose"
+name = "nomad-chose"
 description = "Nomad ELN for UNITOV using baseclasses from Hysprint"
 version = "0.1.0"
 readme = "README.md"
