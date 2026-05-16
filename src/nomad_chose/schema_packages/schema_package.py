@@ -19,8 +19,10 @@ from nomad.datamodel.metainfo.annotations import ELNAnnotation
 from nomad.metainfo import Quantity, Reference, Section, SubSection, SchemaPackage
 import numpy as np
 
-from baseclasses.solar_energy.jvmeasurement import JVMeasurement, SolarCellJV
-from baseclasses.solar_energy import EQEMeasurement
+from baseclasses.solar_energy.jvmeasurement import JVMeasurement
+from baseclasses.solar_energy.eqemeasurement import EQEMeasurement
+from baseclasses.solar_energy.mpp_tracking import MPPTracking
+
 from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import (
     PerovskiteSolarCellSample,
     PerformedMeasurements,
@@ -132,7 +134,7 @@ class LabJVMeasurement(JVMeasurement, EntryData):
         self.pvk_sample.performed_measurements.jv.append(summary)
 
 
-class LabStabilityMeasurement(EntryData):
+class LabStabilityMeasurement(MPPTracking,EntryData):
     m_def = Section(
         label='CHOSE Stability Measurement',
         a_eln=dict(
