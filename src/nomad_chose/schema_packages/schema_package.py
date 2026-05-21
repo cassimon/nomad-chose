@@ -24,8 +24,7 @@ from baseclasses.solar_energy.eqemeasurement import EQEMeasurement
 from baseclasses.solar_energy.mpp_tracking import MPPTracking
 
 from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import (
-    PerovskiteSolarCellSample,
-    PerformedMeasurements,
+    PerovskiteSolarCellSample
 )
 
 configuration = config.get_plugin_entry_point(
@@ -111,27 +110,6 @@ class LabJVMeasurement(JVMeasurement, EntryData):
 
         if not self.results:
             return
-
-        from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import PerformedMeasurements
-        from baseclasses.solar_energy.jvmeasurement import SolarCellJV
-
-        best = max(
-            self.results,
-            key=lambda r: r.efficiency if r.efficiency is not None else 0,
-        )
-        summary = SolarCellJV()
-        summary.efficiency                    = best.efficiency
-        summary.open_circuit_voltage          = best.open_circuit_voltage
-        summary.short_circuit_current_density = best.short_circuit_current_density
-        summary.fill_factor                   = best.fill_factor
-        summary.light_intensity               = best.light_intensity
-        summary.data_file                     = self.jv_file
-
-        if self.pvk_sample.performed_measurements is None:
-            self.pvk_sample.performed_measurements = PerformedMeasurements()
-        if self.pvk_sample.performed_measurements.jv is None:
-            self.pvk_sample.performed_measurements.jv = []
-        self.pvk_sample.performed_measurements.jv.append(summary)
 
 
 class LabStabilityMeasurement(MPPTracking,EntryData):
