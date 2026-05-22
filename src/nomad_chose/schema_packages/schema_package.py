@@ -64,11 +64,11 @@ class LabJVMeasurement(JVMeasurement, EntryData):
         ),
     )
 
-    pvk_sample = Quantity(
-        type=Reference(PerovskiteSolarCellSample.m_def),
-        description='The PerovskiteSolarCellSample this measurement belongs to.',
-        a_eln=ELNAnnotation(component='ReferenceEditQuantity'),
-    )
+    # pvk_sample = Quantity(
+    #     type=Reference(PerovskiteSolarCellSample.m_def),
+    #     description='The PerovskiteSolarCellSample this measurement belongs to.',
+    #     a_eln=ELNAnnotation(component='ReferenceEditQuantity'),
+    # )
 
     jv_file = Quantity(
         type=str,
@@ -129,11 +129,11 @@ class LabStabilityMeasurement(MPPTracking,EntryData):
         ),
     )
 
-    pvk_sample = Quantity(
-        type=Reference(PerovskiteSolarCellSample.m_def),
-        description='The PerovskiteSolarCellSample this measurement belongs to.',
-        a_eln=ELNAnnotation(component='ReferenceEditQuantity'),
-    )
+    # pvk_sample = Quantity(
+    #     type=Reference(PerovskiteSolarCellSample.m_def),
+    #     description='The PerovskiteSolarCellSample this measurement belongs to.',
+    #     a_eln=ELNAnnotation(component='ReferenceEditQuantity'),
+    # )
     stability_parameters_file = Quantity(
         type=str,
         a_eln=ELNAnnotation(component='FileEditQuantity', label='Stability Parameters file'),
@@ -200,11 +200,11 @@ class LabEQEMeasurement(EQEMeasurement, EntryData):
         ),
     )
 
-    pvk_sample = Quantity(
-        type=Reference(PerovskiteSolarCellSample.m_def),
-        description='The PerovskiteSolarCellSample this measurement belongs to.',
-        a_eln=ELNAnnotation(component='ReferenceEditQuantity'),
-    )
+    #  pvk_sample = Quantity(
+    #     type=Reference(PerovskiteSolarCellSample.m_def),
+    #     description='The PerovskiteSolarCellSample this measurement belongs to.',
+    #     a_eln=ELNAnnotation(component='ReferenceEditQuantity'),
+    # )
     eqe_file = Quantity(
         type=str,
         description='Raw IPCE/EQE txt export from CHOSE instrument.',
