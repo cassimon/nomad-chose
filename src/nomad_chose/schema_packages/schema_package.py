@@ -23,10 +23,6 @@ from baseclasses.solar_energy.jvmeasurement import JVMeasurement
 from baseclasses.solar_energy.eqemeasurement import EQEMeasurement
 from baseclasses.solar_energy.mpp_tracking import MPPTracking
 
-from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import (
-    PerovskiteSolarCellSample
-)
-
 configuration = config.get_plugin_entry_point(
     'nomad_chose.schema_packages:schema_package_entry_point'
 )
