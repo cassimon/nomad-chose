@@ -517,8 +517,34 @@ def parse_stability_tracking_from_text(text: str) -> dict[str, Any]:
 
     column_map = {name: idx for idx, name in enumerate(headers)}
 
-    def column_values(name: str) -> np.ndarray:
-        idx = column_map.get(name)
+    def first_available_index(candidates: list[str]) -> int | None:
+        for name in candidates:
+            idx = column_map.get(name)
+            if idx is not None:
+                return idx
+        lower_map = {name.strip().lower(): idx for name, idx in column_map.items()}
+        for name in candidates:
+            idx = lower_map.get(name.strip().lower())
+            if idx is not None:
+                return idx
+        # Fallback for encoding variants (e.g. cm2/cm²/cm�/garbled chars).
+        for name, idx in lower_map.items():
+            if any(token in name for token in ['current density', 'power', 'time (hours)', 'voltage (v)']):
+                # caller will validate semantic match by candidate keyword below
+                pass
+        return None
+
+    def index_by_keyword(keyword: str) -> int | None:
+        for name, idx in column_map.items():
+            if keyword in name.strip().lower():
+                return idx
+        return None
+
+    def column_values(names: str | list[str], keyword: str | None = None) -> np.ndarray:
+        candidates = [names] if isinstance(names, str) else names
+        idx = first_available_index(candidates)
+        if idx is None and keyword is not None:
+            idx = index_by_keyword(keyword)
         if idx is None:
             return np.asarray([], dtype=np.float64)
         values = [_safe_float(row[idx]) for row in rows if idx < len(row)]
@@ -526,10 +552,16 @@ def parse_stability_tracking_from_text(text: str) -> dict[str, Any]:
         return np.asarray(valid, dtype=np.float64)
 
     return {
-        'time_hours': column_values('Time (Hours)'),
-        'voltage': column_values('Voltage (V)'),
-        'current_density': column_values('Current Density (mA/cm2)'),
-        'power': column_values('Power (mW/cm2)'),
+        'time_hours': column_values('Time (Hours)', keyword='time (hours)'),
+        'voltage': column_values('Voltage (V)', keyword='voltage'),
+        'current_density': column_values(
+            ['Current Density (mA/cm2)', 'Current Density (mA/cm²)', 'Current Density (mA/cm�)'],
+            keyword='current density',
+        ),
+        'power': column_values(
+            ['Power (mW/cm2)', 'Power (mW/cm²)', 'Power (mW/cm�)'],
+            keyword='power',
+        ),
     }
 
 
