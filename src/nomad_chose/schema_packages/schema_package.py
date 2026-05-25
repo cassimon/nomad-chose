@@ -22,6 +22,7 @@ import os;
 from baseclasses.solar_energy.jvmeasurement import JVMeasurement
 from baseclasses.solar_energy.eqemeasurement import EQEMeasurement
 from baseclasses.solar_energy.mpp_tracking import MPPTracking
+from baseclasses.helper.utilities import get_encoding
 
 configuration = config.get_plugin_entry_point(
     'nomad_chose.schema_packages:schema_package_entry_point'
@@ -84,19 +85,23 @@ class LabJVMeasurement(JVMeasurement, EntryData):
 
         # Parse the raw file if present and context is available
         if self.jv_file and archive is not None and archive.m_context:
-            from nomad_chose.parsers.file_reading import parse_jv_file
+            from nomad_chose.parsers.file_reading import parse_jv_file_from_text
 
             try:
-                raw_path = archive.m_context.raw_path()
-                results = parse_jv_file(os.path.join(raw_path, self.jv_file), logger)
+                # Use NOMAD raw_file API to read the file with correct encoding
+                with archive.m_context.raw_file(self.jv_file, 'br') as f:
+                    encoding = get_encoding(f)
+
+                with archive.m_context.raw_file(self.jv_file, 'tr', encoding=encoding) as f:
+                    text = f.read()
+
+                results = parse_jv_file_from_text(text, self.jv_file, logger)
                 if results:
                     for result in results:
                         result.data_file = self.jv_file
                     self.results = results
             except Exception as e:
-                logger.warning(
-                    f'LabJVMeasurement: could not parse {self.jv_file}: {e}'
-                )
+                logger.warning(f'LabJVMeasurement: could not parse {self.jv_file}: {e}')
 
         if not self.results:
             return
@@ -146,20 +151,26 @@ class LabStabilityMeasurement(MPPTracking,EntryData):
         if archive is None or archive.m_context is None:
             return
 
-        from nomad_chose.parsers.file_reading import parse_stability_pair
+        from nomad_chose.parsers.file_reading import parse_stability_pair_from_text
 
-        parameters_path = (
-            os.path.join(archive.m_context.raw_path(), self.stability_parameters_file)
-            if self.stability_parameters_file
-            else None
-        )
-        tracking_path = (
-            os.path.join(archive.m_context.raw_path(), self.stability_tracking_file)
-            if self.stability_tracking_file
-            else None
-        )
+        parameters_text = None
+        tracking_text = None
+        try:
+            if self.stability_parameters_file:
+                with archive.m_context.raw_file(self.stability_parameters_file, 'br') as f:
+                    encoding = get_encoding(f)
+                with archive.m_context.raw_file(self.stability_parameters_file, 'tr', encoding=encoding) as f:
+                    parameters_text = f.read()
 
-        parsed = parse_stability_pair(parameters_path, tracking_path)
+            if self.stability_tracking_file:
+                with archive.m_context.raw_file(self.stability_tracking_file, 'br') as f:
+                    encoding = get_encoding(f)
+                with archive.m_context.raw_file(self.stability_tracking_file, 'tr', encoding=encoding) as f:
+                    tracking_text = f.read()
+        except Exception as e:
+            logger.warning(f'LabStabilityMeasurement: could not read stability files: {e}')
+
+        parsed = parse_stability_pair_from_text(parameters_text, tracking_text)
 
         if parsed.parameters:
             self.time_hours = parsed.parameters.get('time_hours')
@@ -204,11 +215,16 @@ class LabEQEMeasurement(EQEMeasurement, EntryData):
         super().normalize(archive, logger)
 
         if self.eqe_file and archive is not None and archive.m_context:
-            from nomad_chose.parsers.file_reading import parse_ipce_file
+            from nomad_chose.parsers.file_reading import parse_ipce_file_from_text
 
             try:
-                raw_path = os.path.join(archive.m_context.raw_path(), self.eqe_file)
-                result = parse_ipce_file(raw_path, logger)
+                with archive.m_context.raw_file(self.eqe_file, 'br') as f:
+                    encoding = get_encoding(f)
+
+                with archive.m_context.raw_file(self.eqe_file, 'tr', encoding=encoding) as f:
+                    text = f.read()
+
+                result = parse_ipce_file_from_text(text, self.eqe_file, logger)
                 if result is not None:
                     result.data_file = self.eqe_file
                     self.eqe_data = [result]
