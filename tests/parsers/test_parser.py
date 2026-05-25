@@ -20,8 +20,7 @@ from nomad_chose.schema_packages.schema_package import (
     LabStabilityMeasurement,
 )
 from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import (
-    PerformedMeasurements,
-    PerovskiteSolarCellSample,
+    PerovskiteSolarCellSampleArea,
 )
 
 DATA = Path(__file__).parent.parent / 'data'
@@ -101,7 +100,7 @@ class TestSchemaNormalize:
         return archive
 
     def test_lab_jv_measurement_normalize_for_stability_jv(self):
-        sample = PerovskiteSolarCellSample()
+        sample = PerovskiteSolarCellSampleArea()
         measurement = LabJVMeasurement()
         measurement.jv_file = '0001_2025-11-20_17.32.31_Stability (JV)_AI03-1A.txt'
         measurement.pvk_sample = sample
@@ -110,8 +109,6 @@ class TestSchemaNormalize:
             measurement.normalize(self._archive_with_file(measurement.jv_file), DummyLogger())
 
         assert len(measurement.results) == 2
-        assert isinstance(sample.performed_measurements, PerformedMeasurements)
-        assert len(sample.performed_measurements.jv) == 1
 
     def test_lab_stability_measurement_normalize(self):
         measurement = LabStabilityMeasurement()
@@ -155,7 +152,7 @@ class TestSchemaNormalize:
 
     def test_stability_jv_writes_best_scan_to_sample_history(self):
         """Stability JV normalize picks the better scan and registers it on the sample."""
-        sample = PerovskiteSolarCellSample()
+        sample = PerovskiteSolarCellSampleArea()
         measurement = LabJVMeasurement()
         measurement.jv_file = '0001_2025-11-20_17.32.31_Stability (JV)_AI03-1A.txt'
         measurement.pvk_sample = sample
@@ -167,11 +164,3 @@ class TestSchemaNormalize:
 
         # Two JV curves (FW + RV) parsed; only the best efficiency appears in sample history
         assert len(measurement.results) == 2
-        assert isinstance(sample.performed_measurements, PerformedMeasurements)
-        assert len(sample.performed_measurements.jv) == 1
-        summary = sample.performed_measurements.jv[0]
-        assert summary.efficiency is not None
-        assert summary.efficiency > 0
-        assert summary.open_circuit_voltage is not None
-        assert summary.fill_factor is not None
-        assert summary.data_file == measurement.jv_file

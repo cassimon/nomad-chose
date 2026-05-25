@@ -18,7 +18,7 @@ from nomad.datamodel.data import EntryData
 from nomad.datamodel.metainfo.annotations import ELNAnnotation
 from nomad.metainfo import Quantity, Reference, Section, SubSection, SchemaPackage
 import numpy as np
-
+import os;
 from baseclasses.solar_energy.jvmeasurement import JVMeasurement
 from baseclasses.solar_energy.eqemeasurement import EQEMeasurement
 from baseclasses.solar_energy.mpp_tracking import MPPTracking
@@ -55,7 +55,7 @@ class LabJVMeasurement(JVMeasurement, EntryData):
         label='CHOSE JV Measurement',
         a_eln=dict(
             properties=dict(
-                order=['name',  'jv_file', 'datetime', 'operator']
+                order=['name', 'jv_file', 'datetime', 'operator']
             )
         ),
     )
@@ -87,8 +87,8 @@ class LabJVMeasurement(JVMeasurement, EntryData):
             from nomad_chose.parsers.file_reading import parse_jv_file
 
             try:
-                raw_path = archive.m_context.raw_path(self.jv_file)
-                results = parse_jv_file(raw_path, logger)
+                raw_path = archive.m_context.raw_path()
+                results = parse_jv_file(os.path.join(raw_path, self.jv_file), logger)
                 if results:
                     for result in results:
                         result.data_file = self.jv_file
@@ -149,12 +149,12 @@ class LabStabilityMeasurement(MPPTracking,EntryData):
         from nomad_chose.parsers.file_reading import parse_stability_pair
 
         parameters_path = (
-            archive.m_context.raw_path(self.stability_parameters_file)
+            os.path.join(archive.m_context.raw_path(), self.stability_parameters_file)
             if self.stability_parameters_file
             else None
         )
         tracking_path = (
-            archive.m_context.raw_path(self.stability_tracking_file)
+            os.path.join(archive.m_context.raw_path(), self.stability_tracking_file)
             if self.stability_tracking_file
             else None
         )
@@ -207,7 +207,7 @@ class LabEQEMeasurement(EQEMeasurement, EntryData):
             from nomad_chose.parsers.file_reading import parse_ipce_file
 
             try:
-                raw_path = archive.m_context.raw_path(self.eqe_file)
+                raw_path = os.path.join(archive.m_context.raw_path(), self.eqe_file)
                 result = parse_ipce_file(raw_path, logger)
                 if result is not None:
                     result.data_file = self.eqe_file

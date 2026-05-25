@@ -20,7 +20,7 @@ def test_upload_jv_stability_sidecar_parses():
     assert entry_archive.data.jv_file.endswith('(JV)_AI03-1A.txt')
     assert entry_archive.data.operator == 'Alice'
     # pvk_sample reference is stored as an unresolved proxy (resolved only at upload time)
-    assert entry_archive.data.pvk_sample is not None
+    assert entry_archive.data.samples is not None
 
 
 def test_upload_stability_sidecar_parses():
@@ -32,7 +32,7 @@ def test_upload_stability_sidecar_parses():
     assert entry_archive.data.stability_parameters_file.endswith('(Parameters)_AI03-1A.txt')
     assert entry_archive.data.stability_tracking_file.endswith('(Tracking)_AI03-1A.txt')
     assert entry_archive.data.operator == 'Alice'
-    assert entry_archive.data.pvk_sample is not None
+    assert entry_archive.data.samples is not None
 
 
 def test_upload_ipce_sidecar_parses():
@@ -43,7 +43,7 @@ def test_upload_ipce_sidecar_parses():
     assert isinstance(entry_archive.data, LabEQEMeasurement)
     assert entry_archive.data.eqe_file.endswith('_IPCE_AI03.txt')
     assert entry_archive.data.operator == 'Bob'
-    assert entry_archive.data.pvk_sample is not None
+    assert entry_archive.data.samples is not None
 
 
 def test_upload_stability_tracking_sidecar_parses():
@@ -55,5 +55,5 @@ def test_upload_stability_tracking_sidecar_parses():
     assert entry_archive.data.stability_tracking_file.endswith('(Tracking)_AI03-1A.txt')
     assert entry_archive.data.stability_parameters_file.endswith('(Parameters)_AI03-1A.txt')
     assert entry_archive.data.operator == 'Carol'
-    assert entry_archive.data.pvk_sample is not None
+    assert entry_archive.data.samples is not None
 
