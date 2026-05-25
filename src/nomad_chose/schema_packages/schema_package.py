@@ -55,7 +55,7 @@ class LabJVMeasurement(JVMeasurement, EntryData):
         label='CHOSE JV Measurement',
         a_eln=dict(
             properties=dict(
-                order=['name', 'pvk_sample', 'jv_file', 'datetime', 'operator']
+                order=['name',  'jv_file', 'datetime', 'operator']
             )
         ),
     )
@@ -98,12 +98,6 @@ class LabJVMeasurement(JVMeasurement, EntryData):
                     f'LabJVMeasurement: could not parse {self.jv_file}: {e}'
                 )
 
-        # Copy scalar summary into sample.performed_measurements (no cycle:
-        # measurement → sample only, never sample → measurement entry)
-        if self.pvk_sample is None:
-            logger.warning('LabJVMeasurement: no pvk_sample set, skipping registration.')
-            return
-
         if not self.results:
             return
 
@@ -115,7 +109,6 @@ class LabStabilityMeasurement(MPPTracking,EntryData):
             properties=dict(
                 order=[
                     'name',
-                    'pvk_sample',
                     'stability_parameters_file',
                     'stability_tracking_file',
                     'datetime',
@@ -187,7 +180,6 @@ class LabEQEMeasurement(EQEMeasurement, EntryData):
             properties=dict(
                 order=[
                     'name',
-                    'pvk_sample',
                     'eqe_file',
                     'datetime',
                     'operator',
