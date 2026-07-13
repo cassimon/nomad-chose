@@ -1071,12 +1071,19 @@ def build_mppt_dict(
             result['time'] = np.asarray(time_hours, dtype=np.float64) * _SECONDS_PER_HOUR
         power = tracking.get('power')
         if power is not None and len(power):
-            result['power_density'] = np.asarray(power, dtype=np.float64)
+            power_density = np.asarray(power, dtype=np.float64)
+            result['power_density'] = power_density
             if use_intensity:
                 # Efficiency in %: the tracked power relative to the incident power.
-                result['efficiency'] = (
-                    np.abs(np.asarray(power, dtype=np.float64)) / use_intensity * 100.0
-                )
+                #
+                # The sign is kept. The instrument's convention (cross-checked
+                # against the Stability (JV) export, where the generating
+                # quadrant has J_MPP > 0 and P_MPP > 0) is that positive power is
+                # power *delivered* by the cell. A fixed-voltage track starts
+                # above Voc, where the cell is driven and consumes power -- taking
+                # the absolute value there would report that as a large positive
+                # efficiency.
+                result['efficiency'] = power_density / use_intensity * 100.0
         for key, target in (('voltage', 'voltage'), ('current_density', 'current_density')):
             values = tracking.get(key)
             if values is not None and len(values):

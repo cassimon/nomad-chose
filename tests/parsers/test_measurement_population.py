@@ -210,6 +210,20 @@ def test_the_reverse_scan_parameters_are_not_shifted_by_the_unnamed_time_column(
     assert parameters['efficiency_fw'][0] == pytest.approx(2.122071)
 
 
+def test_tracked_efficiency_keeps_the_sign_of_the_power():
+    """A fixed-voltage track opens above Voc, where the cell is *driven*.
+
+    The single point in the tracking file is V=1.4 V (this cell's Voc is 0.54 V),
+    J=-12.55 mA/cm^2, P=-17.57 mW/cm^2 -- the cell is consuming power. Taking the
+    absolute value would report that as a +17.57 % efficiency, five times the
+    cell's actual 3.67 % PCE.
+    """
+    data = build_mppt_dict(None, read_text(DATA / TRACKING_FILE))
+
+    assert data['power_density'][0] == pytest.approx(-17.572114)
+    assert data['efficiency'][0] == pytest.approx(-17.572114)  # at 100 mW/cm^2
+
+
 def test_a_short_track_does_not_crash_the_figures_of_merit():
     """baseclasses filters the track with a Savitzky-Golay window of len//5 at
     polyorder 3, so a track under 20 points makes scipy raise."""
