@@ -100,6 +100,13 @@ class TestSchemaNormalize:
         return archive
 
     def test_lab_jv_measurement_normalize_for_stability_jv(self):
+        """The curves must land in `jv_curve`.
+
+        `JVMeasurement.normalize` reads that subsection (and nothing else) to fill
+        archive.results.properties.optoelectronic.solar_cell. This plugin used to
+        write them to `results`, which NOMAD itself rejects as the wrong definition,
+        leaving the Solar Cell Properties empty.
+        """
         sample = PerovskiteSolarCellSampleArea()
         measurement = LabJVMeasurement()
         measurement.jv_file = '0001_2025-11-20_17.32.31_Stability (JV)_AI03-1A.txt'
@@ -108,9 +115,11 @@ class TestSchemaNormalize:
         with patch.object(LabJVMeasurement.__bases__[0], 'normalize', return_value=None):
             measurement.normalize(self._archive_with_file(measurement.jv_file), DummyLogger())
 
-        assert len(measurement.results) == 2
+        assert len(measurement.jv_curve) == 2
+        assert [curve.cell_name for curve in measurement.jv_curve] == ['FW', 'RV']
 
     def test_lab_stability_measurement_normalize(self):
+        """The MPPTracking natives, not the old parallel `tracking_*` quantities."""
         measurement = LabStabilityMeasurement()
         measurement.stability_parameters_file = (
             '0000_2025-11-20_17.32.31_Stability (Parameters)_AI03-1A.txt'
@@ -129,10 +138,11 @@ class TestSchemaNormalize:
 
         measurement.normalize(archive, DummyLogger())
 
-        assert measurement.efficiency_fw is not None
-        assert measurement.tracking_power is not None
-        assert measurement.efficiency_fw.size == 1
-        assert measurement.tracking_power.size == 1
+        assert measurement.power_density is not None
+        assert measurement.power_density.size == 1
+        assert measurement.time is not None
+        assert measurement.jv_parameters.efficiency_fw is not None
+        assert measurement.jv_parameters.efficiency_fw.size == 1
 
     def test_lab_eqe_measurement_normalize(self):
         measurement = LabEQEMeasurement()
@@ -163,4 +173,7 @@ class TestSchemaNormalize:
             )
 
         # Two JV curves (FW + RV) parsed; only the best efficiency appears in sample history
-        assert len(measurement.results) == 2
+        assert len(measurement.jv_curve) == 2
+        best = max(measurement.jv_curve, key=lambda curve: curve.efficiency)
+        assert best.cell_name == 'RV'
+        assert best.efficiency == pytest.approx(3.67)

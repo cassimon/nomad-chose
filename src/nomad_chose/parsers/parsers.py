@@ -62,21 +62,29 @@ class ChoseParser(MatchingParser):
         basename = Path(mainfile).name
         metadata = parse_measurement_metadata(mainfile)
         operator = metadata.get('operator') or metadata.get('user')
+        device = metadata.get('device')
 
-        if kind in {'jv_csv', 'stability_jv'}:
-            measurement = LabJVMeasurement()
+        def seed(measurement):
+            """Seed the header fields common to every CHOSE export.
+
+            The rest (curves, areas, settings) is filled by the entry's own
+            normalize(), which re-reads the raw file through NOMAD's context.
+            """
             measurement.name = basename
-            measurement.jv_file = basename
             if operator:
                 measurement.operator = operator
+            if device:
+                measurement.lab_id = device
+            return measurement
+
+        if kind in {'jv_csv', 'stability_jv'}:
+            measurement = seed(LabJVMeasurement())
+            measurement.jv_file = basename
             archive.data = measurement
             return
 
         if kind in {'stability_parameters', 'stability_tracking'}:
-            measurement = LabStabilityMeasurement()
-            measurement.name = basename
-            if operator:
-                measurement.operator = operator
+            measurement = seed(LabStabilityMeasurement())
             if kind == 'stability_parameters':
                 measurement.stability_parameters_file = basename
                 measurement.stability_tracking_file = _paired_stability_filename(mainfile, kind)
@@ -87,11 +95,8 @@ class ChoseParser(MatchingParser):
             return
 
         if kind == 'ipce':
-            measurement = LabEQEMeasurement()
-            measurement.name = basename
+            measurement = seed(LabEQEMeasurement())
             measurement.eqe_file = basename
-            if operator:
-                measurement.operator = operator
             archive.data = measurement
             return
 
