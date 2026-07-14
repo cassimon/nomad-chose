@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from nomad.datamodel import EntryArchive, EntryMetadata
 
@@ -179,6 +180,43 @@ def test_stability_fills_the_native_mpptracking_quantities():
     assert measurement.active_area.magnitude == pytest.approx(0.09)
 
 
+def test_both_files_of_a_run_land_on_one_measurement():
+    """(Parameters) and (Tracking) are two halves of a single MPPTracking: the
+    track, and the JV parameters sampled along it. Read separately, each half is
+    incomplete -- the parameters carry no track (and so no figures of merit), the
+    track carries no JV parameters -- so both must reach the same section.
+    """
+    measurement = LabStabilityMeasurement()
+    measurement.stability_parameters_file = PARAMETERS_FILE
+    measurement.stability_tracking_file = TRACKING_FILE
+    normalize(measurement, TRACKING_FILE)
+
+    # From the (Tracking) half: the MPP track itself.
+    assert measurement.power_density is not None
+    assert measurement.time is not None
+
+    # From the (Parameters) half: the JV parameters sampled along the track.
+    assert measurement.jv_parameters is not None
+    assert measurement.jv_parameters.efficiency_rv[0] == pytest.approx(3.67055)
+
+
+def test_each_half_on_its_own_is_incomplete():
+    """Which is exactly why the app must not split the pair into two entries."""
+    parameters_only = LabStabilityMeasurement()
+    parameters_only.stability_parameters_file = PARAMETERS_FILE
+    normalize(parameters_only, PARAMETERS_FILE)
+
+    tracking_only = LabStabilityMeasurement()
+    tracking_only.stability_tracking_file = TRACKING_FILE
+    normalize(tracking_only, TRACKING_FILE)
+
+    assert parameters_only.power_density is None  # no track → no figures of merit
+    assert parameters_only.jv_parameters is not None
+
+    assert tracking_only.power_density is not None
+    assert tracking_only.jv_parameters is None
+
+
 def test_tracking_settings_land_in_mpptracking_properties():
     measurement = LabStabilityMeasurement()
     measurement.stability_tracking_file = TRACKING_FILE
@@ -248,6 +286,44 @@ def test_eqe_runs_the_upstream_analysis():
     assert data.bandgap_eqe is not None
     assert data.bandgap_eqe.to('eV').magnitude == pytest.approx(1.72, abs=0.05)
     assert len(data.eqe_array) > 10
+
+
+def test_the_eqe_spectrum_runs_up_in_photon_energy():
+    """baseclasses integrates the spectrum against AM1.5G with `np.interp` and
+    `cumulative_trapezoid`, both of which need an increasing x. The instrument
+    sweeps the wavelength up, i.e. the photon energy *down*, so handing its rows
+    over in file order integrates the spectrum backwards -- the integrated Jsc came
+    out as -0.0011 mA/cm^2.
+
+    18.26 mA/cm^2 is the answer, and the instrument agrees: its own `J integrated`
+    column ends at 18.23.
+    """
+    data = build_eqe_dict(read_text(DATA / IPCE_FILE))
+    photon_energy = np.asarray(data['photon_energy_array'])
+
+    assert np.all(np.diff(photon_energy) > 0)
+
+    measurement = LabEQEMeasurement()
+    measurement.eqe_file = IPCE_FILE
+    normalize(measurement, IPCE_FILE)
+
+    integrated = measurement.eqe_data[0].integrated_jsc.to('mA/cm**2').magnitude
+    assert integrated == pytest.approx(18.26, abs=0.1)
+
+
+def test_the_per_wavelength_columns_are_reordered_with_the_spectrum():
+    """They are rows of the same table: reordering only the spectrum would pair
+    every current with the wrong wavelength."""
+    data = build_eqe_dict(read_text(DATA / IPCE_FILE))
+
+    wavelengths = np.asarray(data['wavelength_array'])
+    integrated = np.asarray(data['current_density_integrated'])
+
+    # Ascending photon energy is descending wavelength, so the longest wavelength
+    # comes first — and that is the row where the instrument's own running integral
+    # has accumulated the whole spectrum.
+    assert wavelengths[0] > wavelengths[-1]
+    assert integrated[0] == pytest.approx(0.0182317)
 
 
 def test_eqe_keeps_the_columns_and_settings_it_used_to_drop():

@@ -31,6 +31,17 @@ def _paired_stability_filename(mainfile: str, kind: str) -> str | None:
     return None
 
 
+def _stability_sibling(path: Path) -> Path | None:
+    """The other half of a stability run: (Parameters) <-> (Tracking)."""
+    for half, other in (
+        ('(Parameters)', '(Tracking)'),
+        ('(Tracking)', '(Parameters)'),
+    ):
+        if half in path.name:
+            return path.with_name(path.name.replace(half, other))
+    return None
+
+
 class NewParser(MatchingParser):
     def parse(
         self,
@@ -44,6 +55,41 @@ class NewParser(MatchingParser):
 
 
 class ChoseParser(MatchingParser):
+    def is_mainfile(
+        self,
+        filename: str,
+        mime: str,
+        buffer: bytes,
+        decoded_buffer: str,
+        compression: str | None = None,
+    ):
+        """Skip a raw file that the Plains app has already described in an archive.
+
+        An upload from the app carries, next to every measurement file, a
+        `<filename>.archive.yaml` describing it -- and that archive is the richer
+        entry: it links the sample and states the cell area and the illumination
+        intensity, none of which the instrument writes into the file. Parsing the
+        raw file *as well* would give the same measurement a second, poorer entry,
+        and both would push a solar cell into `archive.results`, double-counting
+        the device in the perovskite-database overview plots.
+
+        Files dropped into NOMAD by hand have no such companion and still parse.
+        """
+        path = Path(filename)
+        if Path(f'{path}.archive.yaml').is_file():
+            return False
+
+        # A stability run is two files -- (Parameters) and (Tracking) -- and they
+        # are two halves of one measurement, so the app describes the pair in a
+        # *single* archive, named after only one of them. The other half is spoken
+        # for just the same; parsing it would recreate the very duplicate the
+        # companion archive exists to prevent.
+        sibling = _stability_sibling(path)
+        if sibling is not None and Path(f'{sibling}.archive.yaml').is_file():
+            return False
+
+        return super().is_mainfile(filename, mime, buffer, decoded_buffer, compression)
+
     def parse(
         self,
         mainfile: str,

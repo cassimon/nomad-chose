@@ -1146,17 +1146,31 @@ def build_eqe_dict(text: str, logger=None) -> dict[str, Any] | None:
             logger.warning('build_eqe_dict: missing wavelength/IPCE columns')
         return None
 
-    pairs = [
-        (wl, ipce)
-        for wl, ipce in zip(wavelengths, ipce_values)
+    keep = [
+        index
+        for index, (wl, ipce) in enumerate(zip(wavelengths, ipce_values))
         if wl is not None and ipce is not None
     ]
-    if not pairs:
+    if not keep:
         return None
 
-    wavelength_array = np.asarray([wl for wl, _ in pairs], dtype=np.float64)
-    eqe_array = np.asarray([ipce for _, ipce in pairs], dtype=np.float64) / 100.0
+    wavelength_array = np.asarray([wavelengths[i] for i in keep], dtype=np.float64)
+    eqe_array = np.asarray([ipce_values[i] for i in keep], dtype=np.float64) / 100.0
     photon_energy = 1239.841984 / wavelength_array
+
+    # Sort by *ascending photon energy* -- the instrument sweeps the wavelength up,
+    # which is energy going down.
+    #
+    # This is not cosmetic. The EQE analysis in baseclasses integrates the spectrum
+    # against AM1.5G with `np.interp` and `cumulative_trapezoid`, and both of those
+    # require an increasing x. Fed the spectrum backwards, the integral comes out
+    # *negative*: the integrated Jsc read -0.0011 mA/cm^2 instead of 18.26 -- which
+    # is the value the instrument itself reports in its own `J integrated` column
+    # (18.23). Order is the only difference.
+    order = np.argsort(photon_energy)
+    wavelength_array = wavelength_array[order]
+    eqe_array = eqe_array[order]
+    photon_energy = photon_energy[order]
 
     sections = parse_header_sections(text)
     general = sections.get('general info', {})
@@ -1185,17 +1199,20 @@ def build_eqe_dict(text: str, logger=None) -> dict[str, Any] | None:
         },
     }
 
-    # Columns the previous reader ignored entirely.
+    # Columns the previous reader ignored entirely. They are per-wavelength, so
+    # they take the same rows and the same order as the spectrum above -- reordering
+    # only the spectrum would silently pair each current with the wrong wavelength.
     for key, header in (
         ('current_density_device', 'J device (mA/cm2)'),
         ('current_density_integrated', 'J integrated (mA/cm2)'),
     ):
-        values = [value for value in column(header)]
+        values = column(header)
         if values and any(value is not None for value in values):
+            kept = [values[i] if i < len(values) else None for i in keep]
             result[key] = np.asarray(
-                [np.nan if value is None else value for value in values],
+                [np.nan if value is None else value for value in kept],
                 dtype=np.float64,
-            )
+            )[order]
 
     return result
 
