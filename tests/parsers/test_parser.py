@@ -18,6 +18,7 @@ from nomad_chose.schema_packages.schema_package import (
     LabEQEMeasurement,
     LabJVMeasurement,
     LabStabilityMeasurement,
+    LabUVvisMeasurement,
 )
 from nomad_perovskite_solar_cell_sample_plains.schema_packages.sample import (
     PerovskiteSolarCellSampleArea,
@@ -47,6 +48,9 @@ class TestFileReading:
     def test_detect_measurement_kind(self, stability_parameters_txt, ipce_txt):
         assert detect_measurement_kind(stability_parameters_txt) == 'stability_parameters'
         assert detect_measurement_kind(ipce_txt) == 'ipce'
+
+    def test_detect_uvvis(self, uvvis_txt):
+        assert detect_measurement_kind(uvvis_txt) == 'uvvis'
 
     def test_parse_stability_pair(self, stability_parameters_txt, stability_tracking_txt):
         parsed = parse_stability_pair(stability_parameters_txt, stability_tracking_txt)
@@ -90,6 +94,14 @@ class TestParserDispatch:
         assert isinstance(archive.data, LabEQEMeasurement)
         assert archive.data.eqe_file.endswith('_IPCE_AI03.txt')
         assert archive.data.operator == 'FDN DE NICOLA'
+
+    def test_parse_uvvis_creates_uvvis_measurement(self, uvvis_txt):
+        parser = ChoseParser()
+        archive = EntryArchive()
+        parser.parse(uvvis_txt, archive, logging.getLogger())
+
+        assert isinstance(archive.data, LabUVvisMeasurement)
+        assert archive.data.uvvis_file == 'uvvis_transmittance.txt'
 
 
 class TestSchemaNormalize:
@@ -157,6 +169,26 @@ class TestSchemaNormalize:
 
         assert measurement.eqe_data
         assert len(measurement.eqe_data[0].eqe_array) > 10
+
+    def test_lab_uvvis_measurement_normalize(self):
+        measurement = LabUVvisMeasurement()
+        measurement.uvvis_file = 'uvvis_transmittance.txt'
+
+        archive = MagicMock()
+        archive.m_context = MagicMock()
+        archive.m_context.raw_path.return_value = str(DATA / measurement.uvvis_file)
+
+        with patch.object(
+            LabUVvisMeasurement.__bases__[0], 'normalize', return_value=None
+        ):
+            measurement.normalize(archive, DummyLogger())
+
+        assert measurement.measurements
+        spectrum = measurement.measurements[0]
+        assert len(spectrum.wavelength) == 801
+        assert len(spectrum.intensity) == 801
+        # Wavelength in nm, transmittance in % — the film name came from line 1.
+        assert spectrum.name == 'T-PVK 1.68 V_1.6 M_AS 100 uL'
 
     # ── Sample history (performed_measurements) registration ─────────────────
 

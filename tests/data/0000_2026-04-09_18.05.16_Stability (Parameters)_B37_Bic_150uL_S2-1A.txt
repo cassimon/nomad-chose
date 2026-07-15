@@ -1,0 +1,33 @@
+## Header ##
+[General info]
+User	Aliah El Astal Quiros
+Device	B37_Bic_150uL_S2-1A
+Cell area (cm2)	0.09
+Test	Stability (Parameters)
+Date	2026-04-09
+Time	18:05:16
+Note	SMU 1A
+
+[JV Settings]
+Vmin (V)	-0.100
+Vmax (V)	1.300
+Voltage Step (mV)	20.000
+Scan Rate (mV/s)	180.000
+Auto-detect Voc	Yes
+Scan direction	FW then RV
+Voltage Range (V)	10 V
+Current Range (V)	L
+Inverted	No
+Auto-range	On
+
+[Cell Settings]
+Tipology	Cell
+Cell Area (cm2)	0.09
+#Cells	1.00
+W cell area (cm2)	1.00
+#W cells	1.00
+
+## Data ##
+Time (Hours)	Voc (V) FW	Jsc (mA/cm2) FW	V_MPP (V) FW	J_MPP (mA/cm2) FW	P_MPP (mW/cm2) FW	Rs (Ohm) FW	R// (Ohm) FW	Fill Factor (%) FW	Efficiency (%) FW	Voc (V) RV	Jsc (mA/cm2) RV	V_MPP (V) RV	J_MPP (mA/cm2) RV	P_MPP (mW/cm2) RV	Rs (Ohm) RV	R// (Ohm) RV	Fill Factor (%) RV	Efficiency (%) RV
+3.697640E-3	9.856175E-1	1.355120E+0	3.561877E-1	6.474397E-1	2.306100E-1	1.921088E+4	5.399156E+3	1.726601E+1	2.306100E-1	9.862962E-1	1.440089E+0	3.257526E-1	6.968175E-1	2.269901E-1	1.961235E+4	4.614456E+3	1.598123E+1	2.269901E-1
+7.403962E-3	9.845314E-1	1.476888E+0	3.598668E-1	6.854057E-1	2.466548E-1	1.804999E+4	4.631215E+3	1.696338E+1	2.466548E-1	9.846311E-1	1.454716E+0	3.230775E-1	6.947638E-1	2.244626E-1	1.855074E+4	4.373026E+3	1.567083E+1	2.244626E-1

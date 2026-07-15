@@ -109,6 +109,11 @@ def detect_measurement_kind(path: str | Path) -> str | None:
         return 'stability_tracking'
     if suffix.endswith('.txt') and 'Test\tIPCE' in text and 'Wavelength (nm)\tIPCE (%)' in text:
         return 'ipce'
+    # UV-Vis transmittance export: no "## Header ##" block, a "<name> - RawData"
+    # first line and a "Wavelength nm. T%" column header, then space-separated
+    # "<wavelength> <T%>" rows.
+    if suffix.endswith('.txt') and 'Wavelength nm. T%' in text:
+        return 'uvvis'
     return None
 
 
@@ -1215,6 +1220,60 @@ def build_eqe_dict(text: str, logger=None) -> dict[str, Any] | None:
             )[order]
 
     return result
+
+
+def build_uvvis_dict(text: str, logger=None) -> dict[str, Any] | None:
+    """Parse a CHOSE UV-Vis transmittance export.
+
+    The file is a two-line header followed by space-separated "<wavelength> <T%>"
+    rows::
+
+        T-PVK 1.68 V_1.6 M_AS 100 uL - RawData
+        Wavelength nm. T%
+        300.0 0.1
+        ...
+
+    Returns the film ``name`` and the ``wavelength`` (nm) / ``transmittance`` (%)
+    arrays, or None when no data rows parse.
+    """
+    lines = text.splitlines()
+    name = None
+    wavelengths: list[float] = []
+    transmittances: list[float] = []
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        # The film name is the first line, minus the " - RawData" suffix.
+        if name is None and not line[0].isdigit():
+            if line.lower().startswith('wavelength'):
+                continue
+            name = re.sub(r'\s*-\s*RawData\s*$', '', line).strip() or None
+            continue
+        # Column-header line ("Wavelength nm. T%") — skip.
+        if line.lower().startswith('wavelength'):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        wl = _safe_float(parts[0])
+        t = _safe_float(parts[1])
+        if wl is None or t is None:
+            continue
+        wavelengths.append(wl)
+        transmittances.append(t)
+
+    if not wavelengths:
+        if logger:
+            logger.warning('build_uvvis_dict: no data rows in provided content')
+        return None
+
+    return {
+        'name': name,
+        'wavelength': np.asarray(wavelengths, dtype=np.float64),
+        'transmittance': np.asarray(transmittances, dtype=np.float64),
+    }
 
 
 def parse_ipce_file(filepath: str, logger=None) -> SolarCellEQECustom | None:

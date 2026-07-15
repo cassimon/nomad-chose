@@ -22,6 +22,7 @@ import os;
 from baseclasses.solar_energy.jvmeasurement import JVMeasurement
 from baseclasses.solar_energy.eqemeasurement import EQEMeasurement
 from baseclasses.solar_energy.mpp_tracking import MPPTracking
+from baseclasses.solar_energy.uvvismeasurement import UVvisData, UVvisMeasurement
 from baseclasses.helper.utilities import get_encoding
 
 configuration = config.get_plugin_entry_point(
@@ -565,6 +566,73 @@ class LabEQEMeasurement(EQEMeasurement, EntryData):
                     )
             except Exception as e:
                 logger.warning(f'LabEQEMeasurement: could not parse {self.eqe_file}: {e}')
+
+        super().normalize(archive, logger)
+
+
+class LabUVvisMeasurement(UVvisMeasurement, EntryData):
+    """A CHOSE UV-Vis transmittance spectrum of a film.
+
+    Unlike JV/EQE/stability, this is a *film-level* measurement -- it describes a
+    whole substrate, not a single pixel. The raw export carries only wavelength and
+    transmittance, so the spectrum goes into the baseclass `measurements` (the
+    UVvisData `intensity` field holds the transmittance in %).
+    """
+
+    m_def = Section(
+        label='CHOSE UV-Vis Measurement',
+        a_eln=dict(
+            properties=dict(
+                order=[
+                    'name',
+                    'uvvis_file',
+                    'datetime',
+                    'operator',
+                ]
+            )
+        ),
+        a_plot=[
+            {
+                'x': 'measurements/:/wavelength',
+                'y': 'measurements/:/intensity',
+                'layout': {
+                    'showlegend': True,
+                    'yaxis': {'fixedrange': False},
+                    'xaxis': {'fixedrange': False},
+                },
+            }
+        ],
+    )
+
+    uvvis_file = Quantity(
+        type=str,
+        description='Raw UV-Vis transmittance txt export from CHOSE instrument.',
+        a_eln=ELNAnnotation(
+            component='FileEditQuantity', label='Raw UV-Vis file (.txt)'
+        ),
+    )
+    operator = Quantity(type=str, a_eln=ELNAnnotation(component='StringEditQuantity'))
+
+    def normalize(self, archive, logger):
+        if self.uvvis_file and archive is not None and archive.m_context:
+            from nomad_chose.parsers.file_reading import build_uvvis_dict
+
+            try:
+                text = _read_raw_text(archive, self.uvvis_file)
+                data = build_uvvis_dict(text, logger)
+                if data:
+                    entry = UVvisData(
+                        name=data.get('name') or self.name,
+                        wavelength=data['wavelength'],
+                        intensity=data['transmittance'],
+                    )
+                    self.measurements = [entry]
+                    if not self.name and data.get('name'):
+                        self.name = data['name']
+            except Exception as e:
+                logger.warning(
+                    f'LabUVvisMeasurement: could not parse {self.uvvis_file}: {e}'
+                )
 
         super().normalize(archive, logger)
 

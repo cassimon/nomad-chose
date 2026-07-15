@@ -18,6 +18,7 @@ from nomad_chose.parsers.file_reading import (
     build_eqe_dict,
     build_jv_dict,
     build_mppt_dict,
+    build_uvvis_dict,
     parse_header_sections,
     read_text,
 )
@@ -25,6 +26,7 @@ from nomad_chose.schema_packages.schema_package import (
     LabEQEMeasurement,
     LabJVMeasurement,
     LabStabilityMeasurement,
+    LabUVvisMeasurement,
 )
 
 DATA = Path(__file__).parent.parent / 'data'
@@ -346,3 +348,35 @@ def test_build_eqe_dict_rejects_a_non_measurement_file():
 
 def test_build_jv_dict_rejects_a_non_measurement_file():
     assert build_jv_dict(read_text(DATA / 'not_a_jv.txt'), 'not_a_jv.txt') is None
+
+
+# ── UV-Vis transmittance ──────────────────────────────────────────────────────
+
+UVVIS_FILE = 'uvvis_transmittance.txt'
+
+
+def test_build_uvvis_dict_reads_the_whole_spectrum():
+    data = build_uvvis_dict(read_text(DATA / UVVIS_FILE))
+
+    assert data['name'] == 'T-PVK 1.68 V_1.6 M_AS 100 uL'
+    assert len(data['wavelength']) == 801
+    assert len(data['transmittance']) == 801
+    # Wavelength runs 300 → 1100 nm; transmittance is a percent.
+    assert data['wavelength'][0] == pytest.approx(300.0)
+    assert data['wavelength'][-1] == pytest.approx(1100.0)
+    assert data['transmittance'][-1] == pytest.approx(47.6)
+
+
+def test_uvvis_spectrum_lands_in_the_measurements_subsection():
+    measurement = LabUVvisMeasurement()
+    measurement.uvvis_file = UVVIS_FILE
+    normalize(measurement, UVVIS_FILE)
+
+    assert measurement.measurements
+    spectrum = measurement.measurements[0]
+    assert spectrum.wavelength.to('nm').magnitude[0] == pytest.approx(300.0)
+    assert len(spectrum.intensity) == 801
+
+
+def test_build_uvvis_dict_rejects_a_non_measurement_file():
+    assert build_uvvis_dict(read_text(DATA / 'not_a_jv.txt')) is None

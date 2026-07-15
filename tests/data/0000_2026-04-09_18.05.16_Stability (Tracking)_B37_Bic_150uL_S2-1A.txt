@@ -1,0 +1,28 @@
+## Header ##
+[General info]
+User	Aliah El Astal Quiros
+Device	B37_Bic_150uL_S2-1A
+Cell area (cm2)	0.09
+Test	Stability (Tracking)
+Date	2026-04-09
+Time	18:05:16
+Note	SMU 1A
+
+[Tracking Settings]
+Algorithm	MPPT
+dV track (V)	0.0200
+track delay (s)	0.200
+JV interval (min)	100.000
+Test duration (hours)	18:05:16 09/04/2026
+
+[Cell Settings]
+Tipology	Cell
+Cell Area (cm2)	0.09
+#Cells	1.00
+W cell area (cm2)	1.00
+#W cells	1.00
+
+## Data ##
+Time (Hours)	Voltage (V)	Current Density (mA/cm²)	Power (mW/cm²)
+0.003740	0.340000	0.720237	0.244881
+0.007446	0.360000	0.693748	0.249749

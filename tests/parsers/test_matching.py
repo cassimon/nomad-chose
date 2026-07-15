@@ -39,6 +39,10 @@ class TestUnifiedParserMatching:
         content = 'Header\nTest\tRandom Note\n## Data ##\n'
         assert not re.search(parser_entry_point.mainfile_contents_re, content)
 
+    def test_txt_guard_accepts_uvvis_content(self):
+        content = 'Film - RawData\nWavelength nm. T%\n300.0 0.1\n'
+        assert re.search(parser_entry_point.mainfile_contents_re, content)
+
     def test_entry_point_loads_unified_parser(self):
         parser = parser_entry_point.load()
         assert parser.__class__.__name__ == 'ChoseParser'

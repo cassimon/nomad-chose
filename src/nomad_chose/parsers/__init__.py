@@ -21,6 +21,7 @@ parser_entry_point = NewParserEntryPoint(
         r'|Test\tStability \(Parameters\)'
         r'|Test\tStability \(Tracking\)'
         r'|Test\tIPCE'
+        r'|Wavelength nm\. T%'
     ),
 )
 

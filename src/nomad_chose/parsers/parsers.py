@@ -101,6 +101,7 @@ class ChoseParser(MatchingParser):
             LabEQEMeasurement,
             LabJVMeasurement,
             LabStabilityMeasurement,
+            LabUVvisMeasurement,
         )
 
         logger.info(f'ChoseParser: parsing {mainfile}')
@@ -143,6 +144,12 @@ class ChoseParser(MatchingParser):
         if kind == 'ipce':
             measurement = seed(LabEQEMeasurement())
             measurement.eqe_file = basename
+            archive.data = measurement
+            return
+
+        if kind == 'uvvis':
+            measurement = seed(LabUVvisMeasurement())
+            measurement.uvvis_file = basename
             archive.data = measurement
             return
 

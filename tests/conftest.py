@@ -28,3 +28,8 @@ def stability_tracking_txt():
 @pytest.fixture
 def ipce_txt():
     return str(TEST_DATA / '2025-11-20_15.49.56_IPCE_AI03.txt')
+
+
+@pytest.fixture
+def uvvis_txt():
+    return str(TEST_DATA / 'uvvis_transmittance.txt')
