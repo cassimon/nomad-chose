@@ -7,11 +7,13 @@ import pytest
 from baseclasses.solar_energy.jvmeasurement import SolarCellJV
 from nomad.datamodel import EntryArchive
 from nomad_chose.parsers.file_reading import (
+    build_jv_dict,
     detect_measurement_kind,
     parse_ipce_file,
     parse_jv_csv,
     parse_jv_file,
     parse_stability_pair,
+    read_text,
 )
 from nomad_chose.parsers.parsers import ChoseParser
 from nomad_chose.schema_packages.schema_package import (
@@ -52,6 +54,25 @@ class TestFileReading:
     def test_detect_uvvis(self, uvvis_txt):
         assert detect_measurement_kind(uvvis_txt) == 'uvvis'
 
+    def test_detect_dark_jv(self, dark_jv_txt):
+        # The dark sweep is a distinct export ('Test\tDark JV'); it used to fall
+        # through to kind=None and produce an empty JV plot.
+        assert detect_measurement_kind(dark_jv_txt) == 'dark_jv'
+
+    def test_build_jv_dict_dark(self, dark_jv_txt):
+        # A dark sweep yields two dark curves; the current, reported in amperes,
+        # is converted to a density (mA/cm^2) with the 1 cm^2 cell area.
+        jv = build_jv_dict(read_text(dark_jv_txt), dark_jv_txt)
+        assert jv is not None
+        assert jv['intensity'] == 0.0
+        assert len(jv['jv_curve']) == 2
+        assert all(curve['dark'] for curve in jv['jv_curve'])
+        fw = jv['jv_curve'][0]
+        assert fw['name'] == 'Dark FW'
+        assert len(fw['voltage']) == len(fw['current_density']) > 0
+        # First FW row: I = -1.835691E-4 A over 1 cm^2 -> -0.1835691 mA/cm^2.
+        assert fw['current_density'][0] == pytest.approx(-0.1835691, rel=1e-6)
+
     def test_parse_stability_pair(self, stability_parameters_txt, stability_tracking_txt):
         parsed = parse_stability_pair(stability_parameters_txt, stability_tracking_txt)
         assert parsed.parameters['efficiency_fw'].size == 1
@@ -73,6 +94,14 @@ class TestParserDispatch:
         assert isinstance(archive.data, LabJVMeasurement)
         assert archive.data.jv_file.endswith('.txt')
         assert archive.data.operator == 'FDN'
+
+    def test_parse_dark_jv_creates_lab_jv_measurement(self, dark_jv_txt):
+        parser = ChoseParser()
+        archive = EntryArchive()
+        parser.parse(dark_jv_txt, archive, logging.getLogger())
+
+        assert isinstance(archive.data, LabJVMeasurement)
+        assert archive.data.jv_file.endswith('Dark JV_AI03.txt')
 
     def test_parse_stability_parameters_creates_combined_stability_measurement(
         self,

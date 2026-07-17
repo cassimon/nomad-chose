@@ -124,7 +124,7 @@ class ChoseParser(MatchingParser):
                 measurement.lab_id = device
             return measurement
 
-        if kind in {'jv_csv', 'stability_jv'}:
+        if kind in {'jv_csv', 'stability_jv', 'dark_jv'}:
             measurement = seed(LabJVMeasurement())
             measurement.jv_file = basename
             archive.data = measurement

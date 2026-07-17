@@ -103,6 +103,8 @@ def detect_measurement_kind(path: str | Path) -> str | None:
         return 'jv_csv'
     if suffix.endswith('.txt') and 'Test\tStability (JV)' in text:
         return 'stability_jv'
+    if suffix.endswith('.txt') and 'Test\tDark JV' in text:
+        return 'dark_jv'
     if suffix.endswith('.txt') and 'Test\tStability (Parameters)' in text:
         return 'stability_parameters'
     if suffix.endswith('.txt') and 'Test\tStability (Tracking)' in text:
@@ -383,6 +385,8 @@ def _detect_measurement_kind_from_text(text: str, filename: str | None = None) -
         return 'jv_csv'
     if fname.endswith('.txt') and 'Test\tStability (JV)' in text:
         return 'stability_jv'
+    if fname.endswith('.txt') and 'Test\tDark JV' in text:
+        return 'dark_jv'
     if fname.endswith('.txt') and 'Test\tStability (Parameters)' in text:
         return 'stability_parameters'
     if fname.endswith('.txt') and 'Test\tStability (Tracking)' in text:
@@ -643,11 +647,13 @@ def build_jv_dict(
     guessed; `apply_jv_dict` skips them.
     """
     kind = _detect_measurement_kind_from_text(text, filename)
-    if kind not in {'jv_csv', 'stability_jv'}:
+    if kind not in {'jv_csv', 'stability_jv', 'dark_jv'}:
         return None
 
     if kind == 'jv_csv':
         return _build_jv_dict_csv(text, intensity, logger)
+    if kind == 'dark_jv':
+        return _build_jv_dict_dark(text, intensity, logger)
     return _build_jv_dict_stability(text, intensity, logger)
 
 
@@ -762,6 +768,105 @@ def _build_jv_dict_stability(
         'jv_curve': jv_curve,
         'settings': {
             **{f'jv:{k}': v for k, v in jv_settings.items()},
+            **{f'cell:{k}': v for k, v in cell_settings.items()},
+        },
+    }
+
+
+def _build_jv_dict_dark(
+    text: str, intensity: float | None, logger=None
+) -> dict[str, Any] | None:
+    """Build the JV archive dict for a CHOSE **Dark JV** export.
+
+    The dark-JV file is a JV measurement, but it is written in a different shape
+    than the light stability export — which is why the generic reader returned
+    nothing and the entry drew an empty JV plot:
+
+    * its data columns are ``V (V)_FW`` / ``I (A)_FW`` / ``V (V)_RV`` / ``I (A)_RV``,
+      i.e. the current is a raw **current in amperes**, not a current density;
+    * it carries ``[Scan Settings]`` instead of ``[JV Settings]``;
+    * it has no per-scan summary table (no Voc/Jsc/FF/Eff — none of which is
+      defined for a dark sweep anyway).
+
+    The current is divided by the cell area to a density, and both scans are
+    flagged ``dark`` so ``apply_jv_dict`` builds dark curves and no efficiency is
+    derived from them.
+    """
+    headers, rows = _parse_table_after_data_marker(text)
+    if not headers or not rows:
+        if logger:
+            logger.warning('build_jv_dict: no dark-JV data table found')
+        return None
+
+    sections = parse_header_sections(text)
+    general = sections.get('general info', {})
+    scan_settings = sections.get('scan settings', {})
+    cell_settings = sections.get('cell settings', {})
+    active_area = _area_cm2(general, cell_settings)
+
+    index = {name: idx for idx, name in enumerate(headers)}
+
+    def curve_arrays(v_col: str, i_col: str) -> tuple[np.ndarray, np.ndarray] | None:
+        v_idx = index.get(v_col)
+        i_idx = index.get(i_col)
+        if v_idx is None or i_idx is None:
+            return None
+        volts: list[float] = []
+        currents: list[float] = []
+        for row in rows:
+            if v_idx >= len(row) or i_idx >= len(row):
+                continue
+            voltage = _safe_float(row[v_idx])
+            current = _safe_float(row[i_idx])
+            if voltage is None or current is None:
+                continue
+            volts.append(voltage)
+            currents.append(current)
+        if not volts:
+            return None
+        return (
+            np.asarray(volts, dtype=np.float64),
+            np.asarray(currents, dtype=np.float64),
+        )
+
+    # Amps -> mA/cm^2. Without the area the density is unknowable; the instrument
+    # writes 1 cm^2 for a full-device dark sweep, so fall back to that rather than
+    # dropping the curve.
+    area = active_area or 1.0
+
+    jv_curve: list[dict[str, Any]] = []
+    for scan, v_col, i_col in (
+        ('Dark FW', 'V (V)_FW', 'I (A)_FW'),
+        ('Dark RV', 'V (V)_RV', 'I (A)_RV'),
+    ):
+        arrays = curve_arrays(v_col, i_col)
+        if arrays is None:
+            continue
+        voltage, current_amps = arrays
+        jv_curve.append(
+            {
+                'name': scan,
+                'voltage': voltage,
+                'current_density': current_amps / area * 1000.0,
+                'dark': True,
+            }
+        )
+
+    if not jv_curve:
+        if logger:
+            logger.warning('build_jv_dict: dark-JV table had no FW/RV columns')
+        return None
+
+    return {
+        'datetime': _header_datetime(general),
+        'active_area': active_area,
+        'intensity': 0.0,  # a dark sweep — no illumination
+        'operator': general.get('user'),
+        'device': general.get('device'),
+        'note': general.get('note'),
+        'jv_curve': jv_curve,
+        'settings': {
+            **{f'jv:{k}': v for k, v in scan_settings.items()},
             **{f'cell:{k}': v for k, v in cell_settings.items()},
         },
     }

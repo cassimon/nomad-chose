@@ -18,6 +18,7 @@ parser_entry_point = NewParserEntryPoint(
     mainfile_contents_re=(
         r'voltage,current_density'
         r'|Test\tStability \(JV\)'
+        r'|Test\tDark JV'
         r'|Test\tStability \(Parameters\)'
         r'|Test\tStability \(Tracking\)'
         r'|Test\tIPCE'

@@ -1,0 +1,27 @@
+## Header ##
+[General info]
+User	FDN DE NICOLA
+Device	AI03
+Cell area (cm2)	1
+Test	Dark JV
+Date	2025-11-20
+Time	14:22:41
+Temperature	24.87
+Note	
+
+[Scan Settings]
+Vmin (V)	-0.600
+dV (V)	0.020
+Vmax (v)	1.200
+Scan rate (mV/s)	300.00
+Precondition (s)	1.00
+scans	1
+
+## Data ##
+V (V)_FW	I (A)_FW	V (V)_RV	I (A)_RV
+-5.999993E-1	-1.835691E-4	1.200001E+0	4.775266E-4
+-5.800000E-1	-1.696267E-4	1.180002E+0	4.554082E-4
+-5.600000E-1	-1.606779E-4	1.160000E+0	4.386506E-4
+-5.400000E-1	-1.504655E-4	1.140001E+0	4.153915E-4
+-5.199991E-1	-1.395842E-4	1.120001E+0	4.008777E-4
+-5.000008E-1	-1.305162E-4	1.100001E+0	3.860008E-4
