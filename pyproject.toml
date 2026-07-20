@@ -26,7 +26,7 @@ maintainers = [
 license = { file = "LICENSE" }
 dependencies = [
     "nomad-lab>=1.4.1",
-    "nomad-perovskite-solar-cell-sample-plains @ git+https://github.com/cassimon/nomad-perovskite-solar-cell-sample-plains.git@1b2f2541e40828e7d466eaa47d35130878f53eb9",
+    "nomad-perovskite-solar-cell-sample-plains @ git+https://github.com/cassimon/nomad-perovskite-solar-cell-sample-plains.git@e842e90651b17534b86698c43ff9aff2e9035fa9",
 ]
 
 #[project.urls]
